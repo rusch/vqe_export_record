@@ -1,5 +1,7 @@
 require 'simplecov'
-SimpleCov.start
+SimpleCov.start do
+  add_filter "/spec/"
+end
 
 $:.unshift(File.dirname(__FILE__) + '/../lib')
 require 'vqe_export_record/version'
