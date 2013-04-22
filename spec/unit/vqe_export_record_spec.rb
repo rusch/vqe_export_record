@@ -64,7 +64,7 @@ describe VqeExportRecord do
     end
 
     it "can return decoded payload" do
-      @export_record.payload.should be_kind_of(VqeExportRecord::RtcpPayload)
+      @export_record.payload.should be_kind_of(VqeExportRecord::CompoundPacket)
     end
 
   end

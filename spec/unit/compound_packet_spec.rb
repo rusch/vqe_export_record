@@ -1,40 +1,40 @@
 require 'spec_helper'
 require 'vqe_export_record'
 
-describe VqeExportRecord::RtcpPayload do
+describe VqeExportRecord::CompoundPacket do
 
   context "Detect malformed data" do
     let(:rtcp_paket) { VqeExportRecord.parse(COMPOUND_PACKET_V2).payload_data }
     let(:rtcp_paket_v1) { VqeExportRecord.parse(COMPOUND_PACKET_V1).payload_data }
 
     it "raises exception when V2 packet is shorter than a property header" do
-      expect { VqeExportRecord::RtcpPayload.parse(rtcp_paket.slice(0..30)) }
+      expect { VqeExportRecord::CompoundPacket.parse(rtcp_paket.slice(0..30)) }
         .to raise_error VqeExportRecord::ParseError
     end
 
     it "raises exception when V2 packet is shorter than a property header" do
-      expect { VqeExportRecord::RtcpPayload.parse(rtcp_paket_v1.slice(0..26)) }
+      expect { VqeExportRecord::CompoundPacket.parse(rtcp_paket_v1.slice(0..26)) }
         .to raise_error VqeExportRecord::ParseError
     end
 
     it "raises an exception when version=3" do
       corrupt_packet = rtcp_paket.clone
       corrupt_packet[0] = (3 << 4).chr
-      expect { VqeExportRecord::RtcpPayload.parse(corrupt_packet) }
+      expect { VqeExportRecord::CompoundPacket.parse(corrupt_packet) }
         .to raise_error(VqeExportRecord::ParseError, /version/)
     end
 
     it "raises an exception when the stream type is unknown (5)" do
       corrupt_packet = rtcp_paket.clone
       corrupt_packet[1] = 5.chr
-      expect { VqeExportRecord::RtcpPayload.parse(corrupt_packet) }
+      expect { VqeExportRecord::CompoundPacket.parse(corrupt_packet) }
         .to raise_error(VqeExportRecord::ParseError, /stream_type/)
     end
 
     it "raises an exception when the stream type is unknown (5)" do
       corrupt_packet = rtcp_paket.clone
       corrupt_packet[20] = 5.chr
-      expect { VqeExportRecord::RtcpPayload.parse(corrupt_packet) }
+      expect { VqeExportRecord::CompoundPacket.parse(corrupt_packet) }
         .to raise_error(VqeExportRecord::ParseError, /sender_role/)
     end
   end    

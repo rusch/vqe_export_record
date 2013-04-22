@@ -1,6 +1,6 @@
 require_relative 'vqe_export_record/version'
 require_relative 'vqe_export_record/parse_error'
-require_relative 'vqe_export_record/rtcp_payload'
+require_relative 'vqe_export_record/compound_packet'
 
 class VqeExportRecord
 
@@ -55,7 +55,7 @@ class VqeExportRecord
 
   def payload
     return nil if @type != :compound_packet
-    @payload ||= RtcpPayload.parse(@payload_data)
+    @payload ||= CompoundPacket.parse(@payload_data)
   end
 
   # Missed Packets Counter

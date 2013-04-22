@@ -1,5 +1,5 @@
 class VqeExportRecord
-  class RtcpPayload
+  class CompoundPacket
 
     attr_reader :flags,
       :original_send_time,
