@@ -9,7 +9,7 @@ class VqeExportRecord
     2 => :missed_packets_counter,
   }
 
-  attr_reader :version, :type, :flags, :payload
+  attr_reader :version, :type, :length, :payload_data
 
 
   def self.read(socket)
@@ -27,33 +27,40 @@ class VqeExportRecord
   def initialize(args = {})
   end
 
-  def decode(packet)
-    if !packet || packet.length < 4
-      raise ParseError, "Data truncated"
+  def decode(data)
+    if !data || data.length < 4
+      raise ParseError, "Data Truncated"
     end
 
-    version, type_id, len = packet.unpack('CCn')
-    if packet.length < len
-      raise ParseError, "Data truncated"
+    version, type_id, @length = data.unpack('CCn')
+    if data.length < @length
+      raise ParseError, "Data Truncated"
     end
-      
-    @flags   = version & 15
+
+    # "No flags defined yet."
+    # flags   = version & 15
+
     @version = version >> 4
+    if ![1, 2].include?(@version)
+      raise ParseError, "Unsupported Protocol Version (version = #{@version})"
+    end
     @type    = PACKET_TYPES[type_id]
     if !@type
-      raise ParseError, "Illegal payload type"
+      raise ParseError, "Illegal Payload Type (type = #{type_id})"
     end
 
-    @payload = packet.slice(4..(len-1))
+    @payload_data = data.slice(4..(@length-1))
     self
   end
 
-  def rtcp_cp
+  def payload
     return nil if @type != :compound_packet
-    @rtcp_cp ||= VQEExportRecordRTCPPayload.new(packet: @payload)
+    @payload ||= VQEExportRecord::RTCPPayload.parse(@payload_data)
   end
 
+  # Missed Packets Counter
   def count
+    return nil if @type != :missed_packets_counter
     @count ||= @payload.unpack('Q>')[0]
   end
 
