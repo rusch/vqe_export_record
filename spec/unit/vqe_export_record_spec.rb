@@ -3,7 +3,7 @@ require 'vqe_export_record'
 
 describe VqeExportRecord do
   describe "VERSION" do
-    specify { VqeExportRecord.const_get('VERSION').should eql '0.1.0' }
+    specify { VqeExportRecord.const_get('VERSION').should eql '0.2.0' }
   end
 
   context "Detect malformed data" do
