@@ -33,9 +33,9 @@ describe VqeExportRecord do
       @export_record.payload_data.length.should == 184
     end
 
-    # it "can return decoded payload" do
-    #   @export_record.payload.should be_kind_of(VQEExportRecord::RTCPPayload)
-    # end
+    it "can return decoded payload" do
+      @export_record.payload.should be_kind_of(VqeExportRecord::RtcpPayload)
+    end
 
   end
 

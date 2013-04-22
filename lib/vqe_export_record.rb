@@ -55,7 +55,7 @@ class VqeExportRecord
 
   def payload
     return nil if @type != :compound_packet
-    @payload ||= VQEExportRecord::RTCPPayload.parse(@payload_data)
+    @payload ||= RtcpPayload.parse(@payload_data)
   end
 
   # Missed Packets Counter

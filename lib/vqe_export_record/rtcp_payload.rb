@@ -1,5 +1,5 @@
-class VQEExportRecord
-  class RTCPPayload
+class VqeExportRecord
+  class RtcpPayload
 
     attr_reader :flags,
       :original_send_time,
@@ -7,21 +7,83 @@ class VQEExportRecord
       :original_send_time_lo,
       :packet_dest_addr_bin,
       :packet_dest_port,
-      :packet_src_port,
+      :packet_source_port,
       :sender_role,
       :stream_dest_addr_bin,
       :stream_dest_port,
-      :stream_src_addr_bin,
+      :stream_source_addr_bin,
       :stream_type,
       :version
 
-    def initialize(args = {})
-      packet = args.delete(:packet)
-      if packet
-        @data = self.decode(packet)
-      end
+    STREAM_TYPES = {
+      1 => :primary_multicast,
+      2 => :re_sourced_multicast,
+      3 => :retransmission,
+      4 => :primary_unicast,
+    }
+
+    SENDER_ROLES = {
+      1 => :vqe_client,
+      2 => :vqe_server,
+      3 => :vqe_server_headend,
+      4 => :cds_tv_server,
+    }
+
+    def self.parse(data)
+      self.new.decode(data)
     end
 
+    def decode(payload)
+      if payload.length < 32
+        raise ParseError, "Data Truncated"
+      end
+
+      version,                  # C
+        stream_type,            # C
+        @stream_dest_port,      # n
+        @stream_dest_addr_bin,  # a4
+        @packet_dest_addr_bin,  # a4
+        original_send_time,     # N
+        original_send_time_lo,  # N
+        sender_role,            # C / x3
+        @packet_source_addr_bin,# a4
+        @packet_dest_port,      # n
+        @packet_source_port =   # n
+          payload.unpack('C2na4a4N2Cx3a4n2')
+
+      @version = version >>  4
+      if ![1, 2].include?(@version)
+        raise ParseError, "Unsupported Protocol Version (version = #{@version})"
+      end
+
+      @stream_type = STREAM_TYPES[stream_type]
+      if !@stream_type
+        raise ParseError, "Illegal Stream Type (stream_type = #{stream_type}"
+      end
+
+      # "No flags defined yet. Must be zero on transmit, and ignored
+      # in receipt."
+      # flags   = version &  15
+
+      # Overly simplicistc algorithm!
+      original_send_time += original_send_time_lo.to_f / 4294967296 # 2**32
+      @original_send_time =  Time.at(original_send_time - 2208988800)
+
+      @sender_role = SENDER_ROLES[sender_role]
+      if !@sender_role
+        raise ParseError, "Illegal Sender Role (sender_role = #{sender_role})"
+      end
+
+      if @version == 2
+        @rtcp_payload = payload.slice(32..-1)
+      else
+        @stream_source_addr_bin = nil
+        @packet_dest_port    = nil
+        @packet_source_port     = nil
+        @rtcp_payload = payload.slice(24..-1)
+      end
+      self
+    end
 
     def stream_dest_addr
       return nil if !@stream_dest_addr_bin
@@ -34,40 +96,9 @@ class VQEExportRecord
     end
 
     # Only Protocol Version 2
-    def stream_src_addr
-      return nil if !@stream_src_addr_bin
-      @stream_src_addr_bin.unpack('C4').join('.')
-    end
-
-    def decode(payload)
-      version,                # C
-      @stream_type,           # C
-      @stream_dest_port,      # n
-      @stream_dest_addr_bin,  # a4
-      @packet_dest_addr_bin,  # a4
-      original_send_time,     # N
-      original_send_time_lo,  # N
-      @sender_role,           # C / x3
-      @stream_src_addr_bin,   # a4
-      @packet_dest_port,      # n
-      @packet_src_port =      # n
-        payload.unpack('C2na4a4N2Cx3a4n2')
-
-      @flags   = version &  15
-      @version = version >>  4
-
-      # Overly simplicistc algorithm!
-      original_send_time += original_send_time_lo.to_f / 4294967296 # 2**32
-      @original_send_time =  Time.at(original_send_time - 2208988800)
-
-      if @version == 2
-        @rtcp_payload = payload.slice(32..-1)
-      else
-        @stream_src_addr_bin = nil
-        @packet_dest_port    = nil
-        @packet_src_port     = nil
-        @rtcp_payload = payload.slice(24..-1)
-      end
+    def packet_source_addr
+      return nil if !@packet_source_addr_bin
+      @packet_source_addr_bin.unpack('C4').join('.')
     end
 
     def rtcp
