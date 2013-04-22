@@ -9,7 +9,7 @@ class VqeExportRecord
     2 => :missed_packets_counter,
   }
 
-  attr_reader :version, :type, :length, :payload_data
+  attr_reader :version, :type, :length
 
 
   def self.read(socket)
@@ -49,19 +49,24 @@ class VqeExportRecord
       raise ParseError, "Illegal Payload Type (type = #{type_id})"
     end
 
-    @payload_data = data.slice(4..(@length-1))
+    @payload = data.slice(4..(@length-1))
     self
   end
 
-  def payload
+  def compound_packet_data
     return nil if @type != :compound_packet
-    @payload ||= CompoundPacket.parse(@payload_data)
+    @payload
+  end
+
+  def compound_packet
+    return nil if @type != :compound_packet
+    CompoundPacket.parse(@payload)
   end
 
   # Missed Packets Counter
   def missed_packets_count
     return nil if @type != :missed_packets_counter
-    @count ||= @payload_data.unpack('Q>')[0]
+    @payload.unpack('Q>')[0]
   end
 
 end

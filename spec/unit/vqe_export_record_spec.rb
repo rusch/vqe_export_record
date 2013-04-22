@@ -58,13 +58,14 @@ describe VqeExportRecord do
       @export_record.length.should == 188
     end
 
-    it "has payload data" do
-      @export_record.payload_data.should be_kind_of(String)
-      @export_record.payload_data.length.should == 184
+    it "has compound packet data" do
+      @export_record.compound_packet_data.should be_kind_of(String)
+      @export_record.compound_packet_data.length.should == 184
     end
 
-    it "can return decoded payload" do
-      @export_record.payload.should be_kind_of(VqeExportRecord::CompoundPacket)
+    it "can return decoded compound packet" do
+      @export_record.compound_packet
+        .should be_kind_of(VqeExportRecord::CompoundPacket)
     end
 
   end
@@ -86,11 +87,11 @@ describe VqeExportRecord do
       @export_record.length.should == 12
     end
 
-    it "does not return decoded payload" do
-      @export_record.payload.should == nil
+    it "does not return decoded compound packet" do
+      @export_record.compound_packet.should == nil
     end
 
-    it "extracts missed_packets_counter=1073" do
+    it "extracts missed_packets_count=1073" do
       @export_record.missed_packets_count.should == 1073
     end
   end
