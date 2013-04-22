@@ -1,0 +1,83 @@
+= vqe_export_record
+
+* https://github.com/rusch/vqe_export_record
+
+== Description
+
+VQE Export Records are used by Cisco's VQE or CDS-TV Servers to forward RTCP
+Data from both the video sources and the TV Set-Top boxes to a Video Quality
+Monitoring (VQM) application.
+
+== Features
+
+* Parse an Export Recort Packet from String to Ruby object
+* Read an Export Record Packet from an open TCP Stream
+
+== Examples
+
+=== Parse an Export Record of type "Missed Packets Counter"
+
+  require 'vqe_export_record'
+
+  record = VqeExportRecord.parse(export_record_with_missed_packets_counter)
+
+  record.version              # => 2
+  record.type                 # => :missed_packets_counter
+  record.length               # => 12
+  record.missed_packets_count # => 1084
+
+
+=== Parse an Export Record of type "Compound Packet"
+
+  require 'vqe_export_record'
+
+  record = VqeExportRecord.parse(export_record_with_compound_packet)
+
+  record.version              # => 2
+  record.type                 # => :compound_packet
+  record.length               # => 188
+  record.payload_data         # => [compound packet as binary string]
+  record.compound_packet      # => [VqeExportRecord::CompoundPacket object]
+  
+  # RTCP Compound Packet
+
+  compound_packet = record.compound_packet
+
+  compound_packet.version            # => 2
+  compound_packet.stream_dest_addr   # => "239.186.54.142"
+  compound_packet.packet_dest_addr   # => "195.186.197.248"
+  compound_packet.original_send_time # => [Time object]
+  compound_packet.sender_role        # => :vqe_server
+  compound_packet.packet_source_addr # => "178.238.170.142"
+  compound_packet.packet_dest_port   # => 49311
+  compound_packet.packet_source_port # => 39414
+  compound_packet.payload            # => [rtcp packet as binary string]
+
+=== Simple Server that Mimics a VQM
+
+  server = TCPServer.new(6790)
+  while true
+    client = server.accept
+    begin
+      while true
+        export_record = VqeExportRecord.read(client)
+        puts export_record.type.to_s
+      end
+    rescue VqeExportRecord::ParseError =>
+      puts "ERROR: #{e.class.to_s} -- #{e.message}"
+    end
+  end
+
+== Requirements
+
+* Rubies (tested, at least):
+  * 1.9.3
+  * JRuby 1.7.3 (1.9 mode)
+
+== Install
+
+  $ gem install
+
+== Copyright
+
+Copyright (c) 2013 Christian Rusch
