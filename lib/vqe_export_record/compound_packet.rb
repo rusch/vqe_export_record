@@ -7,11 +7,11 @@ class VqeExportRecord
       :original_send_time_lo,
       :packet_dest_addr_bin,
       :packet_dest_port,
+      :packet_source_addr_bin,
       :packet_source_port,
       :sender_role,
       :stream_dest_addr_bin,
       :stream_dest_port,
-      :stream_source_addr_bin,
       :stream_type,
       :version
 
@@ -39,13 +39,14 @@ class VqeExportRecord
       case @version
       when 1
         pattern = 'xCna4a4N2Cx3'
-        raise ParseError, "Data Truncated" if data.length < 28
+        hlen = 28
       when 2
         pattern = 'xCna4a4N2Cx3a4n2'
-        raise ParseError, "Data Truncated" if data.length < 32
+        hlen = 32
       else
         raise ParseError, "Unsupported Protocol Version (version = #{@version})"
       end
+      raise ParseError, "Data Truncated" if data.length < hlen
 
       stream_type,              # C
         @stream_dest_port,      # n
@@ -77,14 +78,7 @@ class VqeExportRecord
         raise ParseError, "Illegal Sender Role (sender_role = #{sender_role})"
       end
 
-      if @version == 2
-        @payload_data = data.slice(32..-1)
-      else
-        @stream_source_addr_bin = nil
-        @packet_dest_port    = nil
-        @packet_source_port     = nil
-        @payload_data = data.slice(24..-1)
-      end
+      @payload_data = data.slice(hlen..-1)
       self
     end
 
