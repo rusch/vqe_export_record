@@ -6,25 +6,55 @@ describe VqeExportRecord do
     specify { VqeExportRecord.const_get('VERSION').should eql '0.1.0' }
   end
 
-  it "raises exception when parsing malformed data" do
-    expect { VqeExportRecord.parse("blah") }
-      .to raise_error VqeExportRecord::ParseError
+  context "Detect malformed data" do
+    it "raises an exception when the length field cannot be read" do
+      # the packet is shorter than 4 octets
+      expect { VqeExportRecord.parse("X") }
+        .to raise_error VqeExportRecord::ParseError
+    end
+
+    it "raises an exception when there is less data than expected" do
+      expect { VqeExportRecord.parse(COMPOUND_PACKET.slice(0..10)) }
+        .to raise_error VqeExportRecord::ParseError
+    end
+
+    it "raises an exception when version=3" do
+      corrupt_packet = COMPOUND_PACKET.clone
+      corrupt_packet[0] = (3 << 4).chr
+      expect { VqeExportRecord.parse(corrupt_packet) }
+        .to raise_error(VqeExportRecord::ParseError, /version/)
+    end
+
+    it "raises an exception when the payload type is unknown (3)" do
+      corrupt_packet = COMPOUND_PACKET.clone
+      corrupt_packet[1] = 3.chr
+      expect { VqeExportRecord.parse(corrupt_packet) }
+        .to raise_error(VqeExportRecord::ParseError, /type/)
+    end
   end
 
-  context "parses VQE Export Record data into a Hash" do
+  it "Reads a packet from the supplied Socket" do
+    client = double("TCPSocket")
+    client.should_receive(:read).with(4).once.and_return(COMPOUND_PACKET[0,4])
+    client.should_receive(:read).with(184).and_return(COMPOUND_PACKET[4, 184])
+
+    VqeExportRecord.read(client)
+  end
+
+  context "Parses a valid Export Record of type 'RTCP Compound Packet'" do
     before do
       @export_record = VqeExportRecord.parse COMPOUND_PACKET
     end
 
-    it "has a version number" do
+    it "extracts version number" do
       @export_record.version.should == 2
     end
 
-    it "has a payload type" do
+    it "extracts payload type" do
       @export_record.type.should == :compound_packet
     end
 
-    it "has a length" do
+    it "extracts length" do
       @export_record.length.should == 188
     end
 
@@ -39,4 +69,29 @@ describe VqeExportRecord do
 
   end
 
+  context "Parses a valid Export Record of type 'Missed Packets Counter'" do
+    before do
+      @export_record = VqeExportRecord.parse MISSED_PACKETS_COUNTER
+    end
+
+    it "extracts version number" do
+      @export_record.version.should == 2
+    end
+
+    it "extracts payload type" do
+      @export_record.type.should == :missed_packets_counter
+    end
+
+    it "extracts length" do
+      @export_record.length.should == 12
+    end
+
+    it "does not return decoded payload" do
+      @export_record.payload.should == nil
+    end
+
+    it "extracts missed_packets_counter=1073" do
+      @export_record.missed_packets_count.should == 1073
+    end
+  end
 end

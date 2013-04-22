@@ -19,5 +19,7 @@ module TestDescriptions
     03:82:7a:ac:3d:1e:6f:34:3d:55:cc:e0:00
   }
 
-
+  MISSED_PACKETS_COUNTER = to_binary %q{
+    20:02:00:0c:00:00:00:00:00:00:04:31:20:01:00:bc
+  }
 end
