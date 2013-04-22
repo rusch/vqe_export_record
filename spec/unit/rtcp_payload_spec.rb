@@ -3,14 +3,62 @@ require 'vqe_export_record'
 
 describe VqeExportRecord::RtcpPayload do
 
-  it "raises exception when parsing malformed data" do
-    expect { VqeExportRecord::RtcpPayload.parse("blah") }
-      .to raise_error VqeExportRecord::ParseError
+  context "Detect malformed data" do
+    let(:rtcp_paket) { VqeExportRecord.parse(COMPOUND_PACKET_V2).payload_data }
+    let(:rtcp_paket_v1) { VqeExportRecord.parse(COMPOUND_PACKET_V1).payload_data }
+
+    it "raises exception when V2 packet is shorter than a property header" do
+      expect { VqeExportRecord::RtcpPayload.parse(rtcp_paket.slice(0..30)) }
+        .to raise_error VqeExportRecord::ParseError
+    end
+
+    it "raises exception when V2 packet is shorter than a property header" do
+      expect { VqeExportRecord::RtcpPayload.parse(rtcp_paket_v1.slice(0..26)) }
+        .to raise_error VqeExportRecord::ParseError
+    end
+
+    it "raises an exception when version=3" do
+      corrupt_packet = rtcp_paket.clone
+      corrupt_packet[0] = (3 << 4).chr
+      expect { VqeExportRecord::RtcpPayload.parse(corrupt_packet) }
+        .to raise_error(VqeExportRecord::ParseError, /version/)
+    end
+
+    it "raises an exception when the stream type is unknown (5)" do
+      corrupt_packet = rtcp_paket.clone
+      corrupt_packet[1] = 5.chr
+      expect { VqeExportRecord::RtcpPayload.parse(corrupt_packet) }
+        .to raise_error(VqeExportRecord::ParseError, /stream_type/)
+    end
+
+    it "raises an exception when the stream type is unknown (5)" do
+      corrupt_packet = rtcp_paket.clone
+      corrupt_packet[20] = 5.chr
+      expect { VqeExportRecord::RtcpPayload.parse(corrupt_packet) }
+        .to raise_error(VqeExportRecord::ParseError, /sender_role/)
+    end
+  end    
+
+  context "parses a valid RTCP Payload V1." do
+
+    before do
+      @rtcp_payload = VqeExportRecord.parse(COMPOUND_PACKET_V1).payload
+    end
+
+    it "extracts version=2" do
+      @rtcp_payload.version.should == 1
+    end
+
+    it "sets packet_source_addr, packet_dest_port and packet_source_port to nil" do
+      @rtcp_payload.packet_source_addr.should == nil
+      @rtcp_payload.packet_dest_port.should == nil
+      @rtcp_payload.packet_source_port.should == nil
+    end
   end
 
-  context "parses a valid RTCP Payload." do
+  context "parses a valid RTCP Payload V2." do
     before do
-      @rtcp_payload = VqeExportRecord.parse(COMPOUND_PACKET).payload
+      @rtcp_payload = VqeExportRecord.parse(COMPOUND_PACKET_V2).payload
     end
 
     it "extracts version=2" do
@@ -54,6 +102,10 @@ describe VqeExportRecord::RtcpPayload do
       @rtcp_payload.packet_source_port.should == 39414
     end
 
+    it "extracts the rtcp payload data" do
+      @rtcp_payload.payload_data.should be_kind_of(String)
+      @rtcp_payload.payload_data.length.should == 152
+    end
   end
 
 end

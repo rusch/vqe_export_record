@@ -33,13 +33,21 @@ class VqeExportRecord
       self.new.decode(data)
     end
 
-    def decode(payload)
-      if payload.length < 32
-        raise ParseError, "Data Truncated"
+    def decode(data)
+      @version = (data.unpack('C')[0] >> 4)
+
+      case @version
+      when 1
+        pattern = 'xCna4a4N2Cx3'
+        raise ParseError, "Data Truncated" if data.length < 28
+      when 2
+        pattern = 'xCna4a4N2Cx3a4n2'
+        raise ParseError, "Data Truncated" if data.length < 32
+      else
+        raise ParseError, "Unsupported Protocol Version (version = #{@version})"
       end
 
-      version,                  # C
-        stream_type,            # C
+      stream_type,              # C
         @stream_dest_port,      # n
         @stream_dest_addr_bin,  # a4
         @packet_dest_addr_bin,  # a4
@@ -49,12 +57,7 @@ class VqeExportRecord
         @packet_source_addr_bin,# a4
         @packet_dest_port,      # n
         @packet_source_port =   # n
-          payload.unpack('C2na4a4N2Cx3a4n2')
-
-      @version = version >>  4
-      if ![1, 2].include?(@version)
-        raise ParseError, "Unsupported Protocol Version (version = #{@version})"
-      end
+          data.unpack(pattern)
 
       @stream_type = STREAM_TYPES[stream_type]
       if !@stream_type
@@ -75,12 +78,12 @@ class VqeExportRecord
       end
 
       if @version == 2
-        @rtcp_payload = payload.slice(32..-1)
+        @payload_data = data.slice(32..-1)
       else
         @stream_source_addr_bin = nil
         @packet_dest_port    = nil
         @packet_source_port     = nil
-        @rtcp_payload = payload.slice(24..-1)
+        @payload_data = data.slice(24..-1)
       end
       self
     end
@@ -101,12 +104,8 @@ class VqeExportRecord
       @packet_source_addr_bin.unpack('C4').join('.')
     end
 
-    def rtcp
-      @rtcp ||= RTCPPacket.new(packet: @rtcp_payload)
-    end
-
-    def payload
-      @rtcp_payload
+    def payload_data
+      @payload_data
     end
 
   end
