@@ -66,7 +66,7 @@ class VqeExportRecord
   # Missed Packets Counter
   def missed_packets_count
     return nil if @type != :missed_packets_counter
-    @payload.unpack('Q>')[0]
+    @payload.reverse.unpack('Q').first
   end
 
 end
