@@ -2,6 +2,10 @@
 
 * https://github.com/rusch/vqe_export_record
 
+== Code Status
+
+* {<img src="https://travis-ci.org/rusch/vqe_export_record.png?branch=master" alt="Build Status" />}[https://travis-ci.org/rusch/vqe_export_record]
+
 == Description
 
 VQE Export Records are used by Cisco's VQE or CDS-TV Servers to forward RTCP
